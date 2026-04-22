@@ -1,0 +1,71 @@
+library(dplyr)
+library(ggplot2)
+
+tunnel_data <- data %>%
+  filter(!is.na(release_pos_x),
+         !is.na(release_pos_z),
+         !is.na(pfx_x),
+         !is.na(pfx_z),
+         !is.na(plate_x),
+         !is.na(plate_z),
+         !is.na(pitch_type)) %>%
+  
+
+  filter(pitch_type %in% c("FF", "FS")) %>%
+  
+  mutate(
+    tunnel_x = release_pos_x + (pfx_x * 0.2),
+    tunnel_z = release_pos_z + (pfx_z * 0.2)
+  )
+
+
+avg_tunnel <- tunnel_data %>%
+  group_by(pitch_type) %>%
+  summarise(
+    tunnel_x = mean(tunnel_x, na.rm = TRUE),
+    tunnel_z = mean(tunnel_z, na.rm = TRUE),
+    plate_x = mean(plate_x, na.rm = TRUE),
+    plate_z = mean(plate_z, na.rm = TRUE),
+    count = n()
+  )
+
+print(avg_tunnel)
+
+ggplot(avg_tunnel) +
+  
+  # Strike zone
+  geom_rect(aes(xmin = -0.83, xmax = 0.83,
+                ymin = 1.5, ymax = 3.5),
+            fill = NA, color = "black", linetype = "dashed") +
+  
+  # Tunnel points (start)
+  geom_point(aes(x = tunnel_x, y = tunnel_z, color = pitch_type),
+             size = 4) +
+  
+  # Plate points (end)
+  geom_point(aes(x = plate_x, y = plate_z, color = pitch_type),
+             size = 4, shape = 4, stroke = 1.5) +
+  
+  # Connect them
+  geom_segment(aes(x = tunnel_x, y = tunnel_z,
+                   xend = plate_x, yend = plate_z,
+                   color = pitch_type),
+               linewidth = 1.2) +
+  
+  # Labels
+  geom_text(aes(x = plate_x, y = plate_z, label = pitch_type),
+            vjust = -1, size = 4) +
+  
+  labs(
+    title = "Yamamoto Average Pitch Tunneling Profile",
+    subtitle = "Average trajectory: release → plate by pitch type",
+    x = "Horizontal Location (ft)",
+    y = "Vertical Location (ft)",
+    color = "Pitch Type"
+  ) +
+  
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    legend.position = "none"
+  )
